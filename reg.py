@@ -28,22 +28,22 @@ class OrdinaryState(BaseState):
     diverging = False
     ordinary = True
 
-    def __init__(self, char, next=None):
+    def __init__(self, char, nxt=None):
         assert char
         self.char = char
-        self._next = None
+        self._nxt = None
 
-        self.next = next
+        self.nxt = nxt
 
     @property
-    def next(self):
-        return self._next
+    def nxt(self):
+        return self._nxt
 
-    @next.setter
-    def next(self, next):
-        if self._next:
+    @nxt.setter
+    def nxt(self, nxt):
+        if self._nxt:
             raise AutomataModifiedError
-        self._next = next
+        self._nxt = nxt
 
 
 State = OrdinaryState
@@ -54,22 +54,22 @@ class BranchState(BaseState):
     diverging = True
     ordinary = False
 
-    def __init__(self, next, alter=None):
-        self._next = None
+    def __init__(self, nxt, alter=None):
+        self._nxt = None
         self._alter = None
 
-        self.next = next
+        self.nxt = nxt
         self.alter = alter
 
     @property
-    def next(self):
-        return self._next
+    def nxt(self):
+        return self._nxt
 
-    @next.setter
-    def next(self, next):
-        if self._next:
+    @nxt.setter
+    def nxt(self, nxt):
+        if self._nxt:
             raise AutomataModifiedError
-        self._next = next
+        self._nxt = nxt
 
     @property
     def alter(self):
@@ -114,7 +114,7 @@ class FragChar(Fragment):
         return self.state
 
     def append(self, frag):
-        self.state.next = frag.starting_state()
+        self.state.nxt = frag.starting_state()
 
 
 class FragConcat(Fragment):
@@ -136,7 +136,7 @@ class FragAlter(Fragment):
     def __init__(self, frag1, frag2):
         self.frag1 = frag1
         self.frag2 = frag2
-        self.state = BranchState(next=frag1.starting_state(), alter=frag2.starting_state())
+        self.state = BranchState(nxt=frag1.starting_state(), alter=frag2.starting_state())
 
     def starting_state(self):
         return self.state
@@ -149,7 +149,7 @@ class FragAlter(Fragment):
 class Frag01(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.state = BranchState(next=frag.starting_state())
+        self.state = BranchState(nxt=frag.starting_state())
 
     def starting_state(self):
         return self.state
@@ -162,7 +162,7 @@ class Frag01(Fragment):
 class FragMany(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.state = BranchState(next=frag.starting_state())
+        self.state = BranchState(nxt=frag.starting_state())
         frag.append(self)
 
     def starting_state(self):
@@ -175,7 +175,7 @@ class FragMany(Fragment):
 class Frag1Many(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.state = BranchState(next=frag.starting_state())
+        self.state = BranchState(nxt=frag.starting_state())
         frag.append(self)
 
     def starting_state(self):
@@ -201,10 +201,10 @@ def compile0(frag):
             return False
 
         if state.diverging:
-            return match_from_state(string, state.next) or match_from_state(string, state.alter)
+            return match_from_state(string, state.nxt) or match_from_state(string, state.alter)
 
         elif state.char == string[0]:
-            return match_from_state(string[1:], state.next)
+            return match_from_state(string[1:], state.nxt)
 
         elif state.char != string[0]:
             return False
@@ -238,7 +238,7 @@ def compile1(frag):
                 # forward diverging states
                 tmp = set()
                 for stt in div:
-                    tmp.add(stt.next)
+                    tmp.add(stt.nxt)
                     tmp.add(stt.alter)
 
                 # have forarded states divided
@@ -262,7 +262,7 @@ def compile1(frag):
             states = {st for st in states if not st.ending}
 
             states = forward(states)
-            states = {st.next for st in states if st.ordinary and st.char == char}
+            states = {st.nxt for st in states if st.ordinary and st.char == char}
             if not states:
                 break
 
