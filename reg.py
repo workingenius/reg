@@ -33,6 +33,8 @@ class OrdinaryState(BaseState):
         self.char = char
         self._next = None
 
+        self.next = next
+
     @property
     def next(self):
         return self._next
