@@ -1,6 +1,18 @@
 """Regular Expression implementation"""
 
 
+class RegError(Exception):
+    pass
+
+
+class AppendEndingError(RegError):
+    """Can't append to a finished automata"""
+
+
+class AutomataModifiedError(RegError):
+    """Automata get modified during building"""
+
+
 class BaseState(object):
     pass
 
@@ -19,7 +31,17 @@ class OrdinaryState(BaseState):
     def __init__(self, char, next=None):
         assert char
         self.char = char
-        self.next = next
+        self._next = None
+
+    @property
+    def next(self):
+        return self._next
+
+    @next.setter
+    def next(self, next):
+        if self._next:
+            raise AutomataModifiedError
+        self._next = next
 
 
 State = OrdinaryState
@@ -31,8 +53,31 @@ class BranchState(BaseState):
     ordinary = False
 
     def __init__(self, next, alter=None):
+        self._next = None
+        self._alter = None
+
         self.next = next
         self.alter = alter
+
+    @property
+    def next(self):
+        return self._next
+
+    @next.setter
+    def next(self, next):
+        if self._next:
+            raise AutomataModifiedError
+        self._next = next
+
+    @property
+    def alter(self):
+        return self._alter
+
+    @alter.setter
+    def alter(self, alter):
+        if self._alter:
+            raise AutomataModifiedError
+        self._alter = alter
 
 
 class Fragment(object):
@@ -56,7 +101,7 @@ class FragEnding(Fragment):
         return EndState()
 
     def append(self, frag):
-        raise Exception('can not append to a finished automata')
+        raise AppendEndingError
 
 
 class FragChar(Fragment):

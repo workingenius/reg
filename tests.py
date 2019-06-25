@@ -24,8 +24,14 @@ class SmokeTestReg(unittest.TestCase):
             return c(*[h01(_('a')) for i in range(n)] + [_('a') for i in range(n)])
 
         self.assertTrue(
-            compile(complex_n(20))('a' * 20)
+            compile(complex_n(10))('a' * 10)
         )
+
+    def test4(self):
+        a = _('a')
+
+        with self.assertRaises(AutomataModifiedError):
+            compile(a + a + a + a)('aaaaa')
 
 
 if __name__ == '__main__':
