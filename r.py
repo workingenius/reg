@@ -4,16 +4,26 @@ class BaseNode(object):
 
 class EndNode(BaseNode):
     ending = True
-
-
-END_NODE = EndNode()
+    diverging = False
+    char = None
 
 
 class Node(BaseNode):
     ending = False
+    diverging = False
 
-    def __init__(self, char, next=None, alter=None):
+    def __init__(self, char, next=None):
+        assert char
         self.char = char
+        self.next = next
+
+
+class DivergingNode(BaseNode):
+    ending = False
+    diverging = True
+    char = None
+
+    def __init__(self, next, alter=None):
         self.next = next
         self.alter = alter
 
@@ -34,10 +44,10 @@ class Frag(object):
 
 class FragEnding(Frag):
     def starting_node(self):
-        return END_NODE
+        return EndNode()
 
     def append(self, frag):
-        raise ValueError
+        raise Exception('can not append to a finished automata')
 
 
 class FragChar(Frag):
@@ -70,7 +80,7 @@ class FragAlter(Frag):
     def __init__(self, frag1, frag2):
         self.frag1 = frag1
         self.frag2 = frag2
-        self.node = Node(char=None, next=frag1.starting_node(), alter=frag2.starting_node())
+        self.node = DivergingNode(next=frag1.starting_node(), alter=frag2.starting_node())
 
     def starting_node(self):
         return self.node
@@ -83,7 +93,7 @@ class FragAlter(Frag):
 class Frag01(Frag):
     def __init__(self, frag):
         self.frag = frag
-        self.node = Node(char=None, next=frag.starting_node())
+        self.node = DivergingNode(next=frag.starting_node())
 
     def starting_node(self):
         return self.node
@@ -96,7 +106,7 @@ class Frag01(Frag):
 class FragMany(Frag):
     def __init__(self, frag):
         self.frag = frag
-        self.node = Node(char=None, next=frag.starting_node())
+        self.node = DivergingNode(next=frag.starting_node())
         frag.append(self)
 
     def starting_node(self):
@@ -109,7 +119,7 @@ class FragMany(Frag):
 class Frag1Many(Frag):
     def __init__(self, frag):
         self.frag = frag
-        self.node = Node(char=None, next=frag.starting_node())
+        self.node = DivergingNode(next=frag.starting_node())
         frag.append(self)
 
     def starting_node(self):
@@ -136,7 +146,7 @@ def compile0(frag):
         elif not node.ending and not string:
             return False
 
-        if node.char is None:
+        if node.diverging:
             return match_from_node(string, node.next) or match_from_node(string, node.alter)
 
         elif node.char == string[0]:
@@ -158,33 +168,54 @@ def compile1(frag):
     def automata_match(string):
         # DFM implementation
 
+        def divide(stts):
+            """divide to states that has char and diverging states"""
+            return (
+                    {st for st in stts if st.char is not None},
+                    {st for st in stts if st.char is None}
+                    )
+
         def forward(stts):
             """forward non-char states"""
 
-            stts1 = set(stts)
+            # ending node cant forward any more
+            # just drop it
+            wanted = {stt for stt in stts if not stt.ending}
 
-            stts0 = {stt for stt in stts1 if stt.char is None}
-            stts1 = stts1 - stts0
+            # split to diverging node (to_drop) and ordinary node (wanted)
+            wanted, to_drop = divide(wanted)
 
-            while stts0:
-                for stt in stts0:
-                    stts1.add(stt.next)
-                    stts1.add(stt.alter)
+            # when there is any diverging node
+            while to_drop:
 
-                stts0 = {stt for stt in stts1 if stt.char is None}
-                stts1 = stts1 - stts0
+                # forward diverging nodes
+                tmp = set()
+                for stt in to_drop:
+                    tmp.add(stt.next)
+                    tmp.add(stt.alter)
 
-            return stts1
+                # have forarded nodes divided
+                tmp_wanted, tmp_to_drop = divide(tmp)
+
+                # merge char nodes together
+                wanted |= tmp_wanted
+
+                # check diverging nodes
+                to_drop = tmp_to_drop
+
+                # repeat till there is no more diverging nodes
+
+            return wanted
 
         states = {frag.starting_node()}
 
         for char in string:
-            states = forward(states - {END_NODE})
-            states = {st.next for st in states if st != END_NODE and st.char == char}
+            states = forward(states)
+            states = {st.next for st in states if st.char and st.char == char}
             if not states:
                 break
 
-        return END_NODE in states
+        return any(st.ending for st in states)
 
     return automata_match
 
