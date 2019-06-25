@@ -1,16 +1,17 @@
-class BaseNode(object):
+class BaseState(object):
     pass
 
 
-class EndNode(BaseNode):
+class EndState(BaseState):
     ending = True
     diverging = False
-    char = None
+    ordinary = False
 
 
-class Node(BaseNode):
+class OrdinaryState(BaseState):
     ending = False
     diverging = False
+    ordinary = True
 
     def __init__(self, char, next=None):
         assert char
@@ -18,18 +19,23 @@ class Node(BaseNode):
         self.next = next
 
 
-class DivergingNode(BaseNode):
+State = OrdinaryState
+
+
+class BranchState(BaseState):
     ending = False
     diverging = True
-    char = None
+    ordinary = False
 
     def __init__(self, next, alter=None):
         self.next = next
         self.alter = alter
 
 
-class Frag(object):
-    def starting_node(self):
+class Fragment(object):
+    """A helper to compose state automata"""
+
+    def starting_state(self):
         raise NotImplementedError
 
     def append(self, frag):
@@ -42,26 +48,26 @@ class Frag(object):
         return FragAlter(self, frag)
 
 
-class FragEnding(Frag):
-    def starting_node(self):
-        return EndNode()
+class FragEnding(Fragment):
+    def starting_state(self):
+        return EndState()
 
     def append(self, frag):
         raise Exception('can not append to a finished automata')
 
 
-class FragChar(Frag):
+class FragChar(Fragment):
     def __init__(self, char):
-        self.node = Node(char=char)
+        self.state = State(char=char)
 
-    def starting_node(self):
-        return self.node
+    def starting_state(self):
+        return self.state
 
     def append(self, frag):
-        self.node.next = frag.starting_node()
+        self.state.next = frag.starting_state()
 
 
-class FragConcat(Frag):
+class FragConcat(Fragment):
     def __init__(self, *frag_lst):
         assert frag_lst
         self.frag_lst = frag_lst
@@ -69,64 +75,64 @@ class FragConcat(Frag):
         for f1, f2 in zip(frag_lst[:-1], frag_lst[1:]):
             f1.append(f2)
 
-    def starting_node(self):
-        return self.frag_lst[0].starting_node()
+    def starting_state(self):
+        return self.frag_lst[0].starting_state()
 
     def append(self, frag):
         self.frag_lst[-1].append(frag)
 
 
-class FragAlter(Frag):
+class FragAlter(Fragment):
     def __init__(self, frag1, frag2):
         self.frag1 = frag1
         self.frag2 = frag2
-        self.node = DivergingNode(next=frag1.starting_node(), alter=frag2.starting_node())
+        self.state = BranchState(next=frag1.starting_state(), alter=frag2.starting_state())
 
-    def starting_node(self):
-        return self.node
+    def starting_state(self):
+        return self.state
 
     def append(self, frag):
-        self.frag1.append(frag.starting_node())
-        self.frag2.append(frag.starting_node())
+        self.frag1.append(frag.starting_state())
+        self.frag2.append(frag.starting_state())
 
 
-class Frag01(Frag):
+class Frag01(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.node = DivergingNode(next=frag.starting_node())
+        self.state = BranchState(next=frag.starting_state())
 
-    def starting_node(self):
-        return self.node
+    def starting_state(self):
+        return self.state
 
     def append(self, frag):
         self.frag.append(frag)
-        self.node.alter = frag.starting_node()
+        self.state.alter = frag.starting_state()
 
 
-class FragMany(Frag):
+class FragMany(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.node = DivergingNode(next=frag.starting_node())
+        self.state = BranchState(next=frag.starting_state())
         frag.append(self)
 
-    def starting_node(self):
-        return self.node
+    def starting_state(self):
+        return self.state
 
     def append(self, frag):
-        self.node.alter = frag.starting_node()
+        self.state.alter = frag.starting_state()
 
 
-class Frag1Many(Frag):
+class Frag1Many(Fragment):
     def __init__(self, frag):
         self.frag = frag
-        self.node = DivergingNode(next=frag.starting_node())
+        self.state = BranchState(next=frag.starting_state())
         frag.append(self)
 
-    def starting_node(self):
-        return self.frag.starting_node()
+    def starting_state(self):
+        return self.frag.starting_state()
 
     def append(self, frag):
-        self.node.alter = frag.starting_node()
+        self.state.alter = frag.starting_state()
 
 
 
@@ -134,29 +140,29 @@ def compile0(frag):
 
     frag.append(FragEnding())
 
-    def match_from_node(string, node):
+    def match_from_state(string, state):
         # recursive implementation
 
-        if node.ending and string:
+        if state.ending and string:
             return False
 
-        elif node.ending and not string:
+        elif state.ending and not string:
             return True
 
-        elif not node.ending and not string:
+        elif not state.ending and not string:
             return False
 
-        if node.diverging:
-            return match_from_node(string, node.next) or match_from_node(string, node.alter)
+        if state.diverging:
+            return match_from_state(string, state.next) or match_from_state(string, state.alter)
 
-        elif node.char == string[0]:
-            return match_from_node(string[1:], node.next)
+        elif state.char == string[0]:
+            return match_from_state(string[1:], state.next)
 
-        elif node.char != string[0]:
+        elif state.char != string[0]:
             return False
 
     def automata_match(string):
-        return match_from_node(string, frag.starting_node())
+        return match_from_state(string, frag.starting_state())
 
     return automata_match
 
@@ -169,49 +175,47 @@ def compile1(frag):
         # DFM implementation
 
         def divide(stts):
-            """divide to states that has char and diverging states"""
-            return (
-                    {st for st in stts if st.char is not None},
-                    {st for st in stts if st.char is None}
-                    )
+            """divide states into non-diverging states and diverging states"""
+            return ({st for st in stts if not st.diverging},
+                    {st for st in stts if st.diverging})
 
         def forward(stts):
-            """forward non-char states"""
+            """forward all diverging states till there's no diverging states"""
 
-            # ending node cant forward any more
-            # just drop it
-            wanted = {stt for stt in stts if not stt.ending}
+            # divide them into non-diverging states (non_div) and diverging states (div)
+            non_div, div = divide(stts)
 
-            # split to diverging node (to_drop) and ordinary node (wanted)
-            wanted, to_drop = divide(wanted)
+            # when there is any diverging state
+            while div:
 
-            # when there is any diverging node
-            while to_drop:
-
-                # forward diverging nodes
+                # forward diverging states
                 tmp = set()
-                for stt in to_drop:
+                for stt in div:
                     tmp.add(stt.next)
                     tmp.add(stt.alter)
 
-                # have forarded nodes divided
-                tmp_wanted, tmp_to_drop = divide(tmp)
+                # have forarded states divided
+                tmp_non_div, tmp_div = divide(tmp)
 
-                # merge char nodes together
-                wanted |= tmp_wanted
+                # merge ordinary states together
+                non_div |= tmp_non_div
 
-                # check diverging nodes
-                to_drop = tmp_to_drop
+                # check diverging states
+                div = tmp_div
 
-                # repeat till there is no more diverging nodes
+                # repeat till there is no more diverging states
 
-            return wanted
+            return non_div
 
-        states = {frag.starting_node()}
+        states = {frag.starting_state()}
 
         for char in string:
+            # ending state can't forward any more
+            # just drop it
+            states = {st for st in states if not st.ending}
+
             states = forward(states)
-            states = {st.next for st in states if st.char and st.char == char}
+            states = {st.next for st in states if st.ordinary and st.char == char}
             if not states:
                 break
 
