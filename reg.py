@@ -1,3 +1,6 @@
+"""Regular Expression implementation"""
+
+
 class BaseState(object):
     pass
 
@@ -228,7 +231,6 @@ compile = compile0
 
 # syntax sugar
 
-
 def frag_string(string):
     return FragConcat(*[FragChar(c) for c in string])
 
@@ -239,26 +241,4 @@ c = FragConcat
 h01 = Frag01  # has 0 or 1
 hm = FragMany  # has many
 h1m = Frag1Many  # has 1 or many
-
-
-print(
-    compile(_('a'))('a'),
-    compile(
-        c(
-            h01(_('b')),
-            h01(_('a')),
-            _('b'),
-            _('a')
-            )
-        )('ba')
-)
-
-
-def complex_n(n):
-    return c(*[h01(_('a')) for i in range(n)] + [_('a') for i in range(n)])
-
-
-print(
-    compile(complex_n(20))('a' * 20)
-)
 
