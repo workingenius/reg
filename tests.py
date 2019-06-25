@@ -15,8 +15,8 @@ class SmokeTestReg(unittest.TestCase):
                     h01(_('a')),
                     _('b'),
                     _('a')
-                    )
-                )('ba')
+                )
+            )('ba')
         )
 
     def test3(self):
@@ -30,4 +30,3 @@ class SmokeTestReg(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

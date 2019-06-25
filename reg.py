@@ -138,9 +138,7 @@ class Frag1Many(Fragment):
         self.state.alter = frag.starting_state()
 
 
-
 def compile0(frag):
-
     frag.append(FragEnding())
 
     def match_from_state(string, state):
@@ -171,7 +169,6 @@ def compile0(frag):
 
 
 def compile1(frag):
-
     frag.append(FragEnding())
 
     def automata_match(string):
@@ -229,6 +226,7 @@ def compile1(frag):
 
 compile = compile0
 
+
 # syntax sugar
 
 def frag_string(string):
@@ -241,4 +239,3 @@ c = FragConcat
 h01 = Frag01  # has 0 or 1
 hm = FragMany  # has many
 h1m = Frag1Many  # has 1 or many
-
