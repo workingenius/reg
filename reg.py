@@ -186,6 +186,9 @@ class Frag1Many(Fragment):
 
 
 def compile0(frag):
+    if isinstance(frag, RegularTreeNode):
+        frag = frag.to_frag()
+
     frag.append(FragEnding())
 
     def match_from_state(string, state):
@@ -216,6 +219,9 @@ def compile0(frag):
 
 
 def compile1(frag):
+    if isinstance(frag, RegularTreeNode):
+        frag = frag.to_frag()
+
     frag.append(FragEnding())
 
     def automata_match(string):
@@ -274,15 +280,65 @@ def compile1(frag):
 compile = compile0
 
 
-# syntax sugar
-
-def frag_string(string):
-    return FragConcat(*[FragChar(c) for c in string])
+# Regular Tree -- A readable and reusable regular expression counterpart
 
 
-_ = FragChar
-s = frag_string
-c = FragConcat
-h01 = Frag01  # has 0 or 1
-hm = FragMany  # has many
-h1m = Frag1Many  # has 1 or many
+class RegularTreeNode(object):
+    def to_frag(self):
+        raise NotImplementedError
+
+
+class RTChar(RegularTreeNode):
+    def __init__(self, char):
+        self.char = char
+
+    def to_frag(self):
+        return FragChar(char=self.char)
+
+
+class RTString(RegularTreeNode):
+    def __init__(self, string):
+        self.string = string
+
+    def to_frag(self):
+        return FragConcat(*[FragChar(x) for x in self.string])
+
+
+class RTConcat(RegularTreeNode):
+    def __init__(self, *rt_lst):
+        self.rt_lst = rt_lst
+
+    def to_frag(self):
+        return FragConcat(*[rt.to_frag() for rt in self.rt_lst])
+
+
+class RT01(RegularTreeNode):
+    def __init__(self, rt):
+        self.rt = rt
+
+    def to_frag(self):
+        return Frag01(self.rt.to_frag())
+
+
+class RTMany(RegularTreeNode):
+    def __init__(self, rt):
+        self.rt = rt
+
+    def to_frag(self):
+        return FragMany(self.rt.to_frag())
+
+
+class RT1Many(RegularTreeNode):
+    def __init__(self, rt):
+        self.rt = rt
+
+    def to_frag(self):
+        return Frag1Many(self.rt.to_frag())
+
+
+_ = RTChar
+s = RTString
+c = RTConcat
+h01 = RT01  # has 0 or 1
+hm = RTMany  # has many
+h1m = RT1Many  # has 1 or many

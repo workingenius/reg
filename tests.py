@@ -30,8 +30,9 @@ class SmokeTestReg(unittest.TestCase):
     def test4(self):
         a = _('a')
 
-        with self.assertRaises(AutomataModifiedError):
-            compile(a + a + a + a)('aaaaa')
+        self.assertTrue(
+            compile(c(a, a, a, a))('aaaa')
+        )
 
 
 if __name__ == '__main__':
