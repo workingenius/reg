@@ -3,11 +3,22 @@ from reg import *
 from reg import _
 
 
+def for_all_compile(raw_case):
+    def case(test_case_obj):
+        for com in [compile0, compile1]:
+            raw_case(test_case_obj, com)
+
+    return case
+
+
 class SmokeTestReg(unittest.TestCase):
-    def test1(self):
+
+    @for_all_compile
+    def test1(self, compile):
         self.assertTrue(compile(_('a'))('a'))
 
-    def test2(self):
+    @for_all_compile
+    def test2(self, compile):
         self.assertTrue(
             compile(
                 c(
@@ -19,7 +30,8 @@ class SmokeTestReg(unittest.TestCase):
             )('ba')
         )
 
-    def test3(self):
+    @for_all_compile
+    def test3(self, compile):
         def complex_n(n):
             return c(*[h01(_('a')) for i in range(n)] + [_('a') for i in range(n)])
 
@@ -27,7 +39,8 @@ class SmokeTestReg(unittest.TestCase):
             compile(complex_n(10))('a' * 10)
         )
 
-    def test4(self):
+    @for_all_compile
+    def test4(self, compile):
         a = _('a')
 
         self.assertTrue(
