@@ -91,12 +91,6 @@ class Fragment(object):
     def append(self, frag):
         raise NotImplementedError
 
-    def __add__(self, frag):
-        return FragConcat(self, frag)
-
-    def __or__(self, frag):
-        return FragAlter(self, frag)
-
 
 class FragEnding(Fragment):
     def starting_state(self):
@@ -287,6 +281,12 @@ class RegularTreeNode(object):
     def to_frag(self):
         raise NotImplementedError
 
+    def __add__(self, other):
+        return RTConcat(self, other)
+
+    def __or__(self, other):
+        return RTAlter(self, other)
+
 
 class RTChar(RegularTreeNode):
     def __init__(self, char):
@@ -310,6 +310,15 @@ class RTConcat(RegularTreeNode):
 
     def to_frag(self):
         return FragConcat(*[rt.to_frag() for rt in self.rt_lst])
+
+
+class RTAlter(RegularTreeNode):
+    def __init__(self, rt1, rt2):
+        self.rt1 = rt1
+        self.rt2 = rt2
+
+    def to_frag(self):
+        return FragAlter(self.rt1, self.rt2)
 
 
 class RT01(RegularTreeNode):
