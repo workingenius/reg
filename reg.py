@@ -93,8 +93,11 @@ class Fragment(object):
 
 
 class FragEnding(Fragment):
+    def __init__(self):
+        self.state = EndState()
+
     def starting_state(self):
-        return EndState()
+        return self.state
 
     def append(self, frag):
         raise AppendEndingError
@@ -136,8 +139,8 @@ class FragAlter(Fragment):
         return self.state
 
     def append(self, frag):
-        self.frag1.append(frag.starting_state())
-        self.frag2.append(frag.starting_state())
+        self.frag1.append(frag)
+        self.frag2.append(frag)
 
 
 class Frag01(Fragment):
@@ -318,7 +321,7 @@ class RTAlter(RegularTreeNode):
         self.rt2 = rt2
 
     def to_frag(self):
-        return FragAlter(self.rt1, self.rt2)
+        return FragAlter(self.rt1.to_frag(), self.rt2.to_frag())
 
 
 class RT01(RegularTreeNode):

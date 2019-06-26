@@ -47,6 +47,17 @@ class SmokeTestReg(unittest.TestCase):
             compile(c(a, a, a, a))('aaaa')
         )
 
+    @for_all_compile
+    def test5(self, compile):
+        a = _('a')
+        b = _('b')
+
+        r = compile(a | b)
+
+        self.assertTrue(r('a'))
+        self.assertTrue(r('b'))
+        self.assertFalse(r('d'))
+
 
 if __name__ == '__main__':
     unittest.main()
