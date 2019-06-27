@@ -5,13 +5,23 @@ from reg import _
 
 def for_all_compile(raw_case):
     def case(test_case_obj):
-        for com in [compile0, compile1]:
+        for com in [
+            compile0,
+            compile1
+        ]:
             raw_case(test_case_obj, com)
 
     return case
 
 
 class SmokeTestReg(unittest.TestCase):
+    def _true(self, *lst):
+        for e in lst:
+            self.assertTrue(e)
+
+    def _false(self, *lst):
+        for e in lst:
+            self.assertFalse(e)
 
     @for_all_compile
     def test1(self, compile):
@@ -57,6 +67,48 @@ class SmokeTestReg(unittest.TestCase):
         self.assertTrue(r('a'))
         self.assertTrue(r('b'))
         self.assertFalse(r('d'))
+
+    @for_all_compile
+    def test6(self, compile):
+        a = compile(s('abc'))
+
+        self._true(
+            a('abc')
+        )
+
+        self._false(
+            a('a'),
+            a('ab'),
+            a('abcd'),
+            a('abd')
+        )
+
+    @for_all_compile
+    def test7(self, compile):
+        a = s('abc')
+        b = s('def')
+
+        r = compile(hm(a | b))
+
+        self._true(
+            r(''),
+            r('abc'),
+            r('def'),
+            r('abcabc'),
+            r('defdef'),
+            r('abcdef'),
+            r('defabc'),
+            r('abc' * 7),
+            r('def' * 10),
+            r('abcdef' * 30),
+        )
+
+        self._false(
+            r('abc def'),
+            r('acbdef'),
+            r('abcde'),
+            r('abdef'),
+        )
 
 
 if __name__ == '__main__':

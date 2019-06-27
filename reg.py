@@ -191,6 +191,11 @@ def compile0(frag):
     def match_from_state(string, state):
         # recursive implementation
 
+        if state.diverging:
+            assert state.nxt is not state
+            assert state.alter is not state
+            return match_from_state(string, state.nxt) or match_from_state(string, state.alter)
+
         if state.ending and string:
             return False
 
@@ -199,9 +204,6 @@ def compile0(frag):
 
         elif not state.ending and not string:
             return False
-
-        if state.diverging:
-            return match_from_state(string, state.nxt) or match_from_state(string, state.alter)
 
         elif state.char == string[0]:
             return match_from_state(string[1:], state.nxt)
@@ -257,15 +259,13 @@ def compile1(frag):
 
             return non_div
 
-        states = {frag.starting_state()}
+        states = forward({frag.starting_state()})
 
         for char in string:
-            # ending state can't forward any more
-            # just drop it
             states = {st for st in states if not st.ending}
-
-            states = forward(states)
             states = {st.nxt for st in states if st.ordinary and st.char == char}
+            states = forward(states)
+
             if not states:
                 break
 
