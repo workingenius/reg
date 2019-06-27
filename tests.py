@@ -110,6 +110,34 @@ class SmokeTestReg(unittest.TestCase):
             r('abdef'),
         )
 
+    @for_all_compile
+    def test8(self, compile):
+        a = s('abc')
+        b = s('def')
+
+        r = compile(
+            h1m((a + b) | (b + a))
+        )
+
+        self._true(
+            r('abcdef'),
+            r('defabc'),
+            r('abcdef' * 2),
+            r('defabc' * 2),
+            r('abcdef' + 'defabc'),
+            r('defabc' + 'abcdef'),
+            r('abcdef' * 10),
+            r('defabc' * 10),
+        )
+
+        self._false(
+            r(''),
+            r('abcde'),
+            r('abcdefa'),
+            r('defabd'),
+            r('ddddddd'),
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

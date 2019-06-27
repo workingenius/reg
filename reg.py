@@ -88,8 +88,17 @@ class Fragment(object):
     def starting_state(self):
         raise NotImplementedError
 
-    def append(self, frag):
+    def append(self, state):
         raise NotImplementedError
+
+
+def append(frag, frag_or_state):
+    if isinstance(frag_or_state, BaseState):
+        frag.append(frag_or_state)
+    elif isinstance(frag_or_state, Fragment):
+        frag.append(frag_or_state.starting_state())
+    else:
+        raise TypeError
 
 
 class FragEnding(Fragment):
@@ -99,7 +108,7 @@ class FragEnding(Fragment):
     def starting_state(self):
         return self.state
 
-    def append(self, frag):
+    def append(self, state):
         raise AppendEndingError
 
 
@@ -110,8 +119,8 @@ class FragChar(Fragment):
     def starting_state(self):
         return self.state
 
-    def append(self, frag):
-        self.state.nxt = frag.starting_state()
+    def append(self, state):
+        self.state.nxt = state
 
 
 class FragConcat(Fragment):
@@ -120,13 +129,13 @@ class FragConcat(Fragment):
         self.frag_lst = frag_lst
 
         for f1, f2 in zip(frag_lst[:-1], frag_lst[1:]):
-            f1.append(f2)
+            append(f1, f2)
 
     def starting_state(self):
         return self.frag_lst[0].starting_state()
 
-    def append(self, frag):
-        self.frag_lst[-1].append(frag)
+    def append(self, state):
+        append(self.frag_lst[-1], state)
 
 
 class FragAlter(Fragment):
@@ -138,9 +147,9 @@ class FragAlter(Fragment):
     def starting_state(self):
         return self.state
 
-    def append(self, frag):
-        self.frag1.append(frag)
-        self.frag2.append(frag)
+    def append(self, state):
+        append(self.frag1, state)
+        append(self.frag2, state)
 
 
 class Frag01(Fragment):
@@ -151,42 +160,42 @@ class Frag01(Fragment):
     def starting_state(self):
         return self.state
 
-    def append(self, frag):
-        self.frag.append(frag)
-        self.state.alter = frag.starting_state()
+    def append(self, state):
+        append(self.frag, state)
+        self.state.alter = state
 
 
 class FragMany(Fragment):
     def __init__(self, frag):
         self.frag = frag
         self.state = BranchState(nxt=frag.starting_state())
-        frag.append(self)
+        append(frag, self)
 
     def starting_state(self):
         return self.state
 
-    def append(self, frag):
-        self.state.alter = frag.starting_state()
+    def append(self, state):
+        self.state.alter = state
 
 
 class Frag1Many(Fragment):
     def __init__(self, frag):
         self.frag = frag
         self.state = BranchState(nxt=frag.starting_state())
-        frag.append(self)
+        append(frag, self.state)
 
     def starting_state(self):
         return self.frag.starting_state()
 
-    def append(self, frag):
-        self.state.alter = frag.starting_state()
+    def append(self, state):
+        self.state.alter = state
 
 
 def compile0(frag):
     if isinstance(frag, RegularTreeNode):
         frag = frag.to_frag()
 
-    frag.append(FragEnding())
+    append(frag, FragEnding())
 
     def match_from_state(string, state):
         # recursive implementation
@@ -221,7 +230,7 @@ def compile1(frag):
     if isinstance(frag, RegularTreeNode):
         frag = frag.to_frag()
 
-    frag.append(FragEnding())
+    append(frag, FragEnding())
 
     def automata_match(string):
         # DFM implementation
