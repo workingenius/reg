@@ -1,6 +1,6 @@
 import unittest
 from reg import *
-from reg import _
+from reg import _, _any
 
 
 def for_all_compile(raw_case):
@@ -136,6 +136,24 @@ class SmokeTestReg(unittest.TestCase):
             r('abcdefa'),
             r('defabd'),
             r('ddddddd'),
+        )
+
+    @for_all_compile
+    def test9(self, compile):
+        a = _any('a', 'b', 'c', 'd', 'e', 'f')
+        r = compile(a)
+
+        self._true(
+            r('a'),
+            r('b'),
+            r('f')
+        )
+
+        self._false(
+            r('g'),
+            r('h'),
+            r('kkk'),
+            r('aa')
         )
 
 

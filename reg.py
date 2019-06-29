@@ -62,6 +62,10 @@ class BranchState(BaseState):
         self.alter = alter
 
     @property
+    def nxt_set(self):
+        return {self.nxt, self.alter}
+
+    @property
     def nxt(self):
         return self._nxt
 
@@ -80,6 +84,15 @@ class BranchState(BaseState):
         if self._alter:
             raise AutomataModifiedError
         self._alter = alter
+
+
+class MultiBranchState(BaseState):
+    ending = False
+    diverging = True
+    ordinary = False
+
+    def __init__(self, nxt_set):
+        self.nxt_set = set(nxt_set)
 
 
 class Fragment(object):
@@ -191,6 +204,19 @@ class Frag1Many(Fragment):
         self.state.alter = state
 
 
+class FragChoices(Fragment):
+    def __init__(self, choice_lst):
+        nxt_set = {State(char=e) for e in choice_lst}
+        self.state = MultiBranchState(nxt_set)
+
+    def starting_state(self):
+        return self.state
+
+    def append(self, state):
+        for s in self.state.nxt_set:
+            s.nxt = state
+
+
 def compile0(frag):
     if isinstance(frag, RegularTreeNode):
         frag = frag.to_frag()
@@ -201,9 +227,11 @@ def compile0(frag):
         # recursive implementation
 
         if state.diverging:
-            assert state.nxt is not state
-            assert state.alter is not state
-            return match_from_state(string, state.nxt) or match_from_state(string, state.alter)
+            for nxt in state.nxt_set:
+                r = match_from_state(string, nxt)
+                if r:
+                    return r
+            return False
 
         if state.ending and string:
             return False
@@ -252,8 +280,7 @@ def compile1(frag):
                 # forward diverging states
                 tmp = set()
                 for stt in div:
-                    tmp.add(stt.nxt)
-                    tmp.add(stt.alter)
+                    tmp |= stt.nxt_set
 
                 # have forarded states divided
                 tmp_non_div, tmp_div = divide(tmp)
@@ -357,9 +384,18 @@ class RT1Many(RegularTreeNode):
         return Frag1Many(self.rt.to_frag())
 
 
+class RTChoices(RegularTreeNode):
+    def __init__(self, *char_lst):
+        self.char_lst = char_lst
+
+    def to_frag(self):
+        return FragChoices(self.char_lst)
+
+
 _ = RTChar
 s = RTString
 c = RTConcat
 h01 = RT01  # has 0 or 1
 hm = RTMany  # has many
 h1m = RT1Many  # has 1 or many
+_any = RTChoices
