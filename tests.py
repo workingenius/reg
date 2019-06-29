@@ -156,6 +156,71 @@ class SmokeTestReg(unittest.TestCase):
             r('aa')
         )
 
+    @for_all_compile
+    def test10(self, compile):
+        a = _('a')
+
+        r = compile(rep(a, max=3))
+        self._true(
+            r(''),
+            r('a'),
+            r('aa'),
+            r('aaa')
+        )
+        self._false(
+            r('aaaa'),
+            r('b'),
+            r('bb'),
+            r('bbb'),
+            r('aaab')
+        )
+
+        r = compile(rep(a, min=3))
+        self._true(
+            r('aaa'),
+            r('aaaa'),
+            r('a' * 10),
+            r('a' * 100)
+        )
+        self._false(
+            r(''),
+            r('a'),
+            r('aa'),
+            r('aab'),
+            r('baa'),
+            r('aaaab')
+        )
+
+        r = compile(rep(a, min=5, max=8))
+        self._true(
+            r('a' * 5),
+            r('a' * 6),
+            r('a' * 7),
+            r('a' * 8)
+        )
+        self._false(
+            r(''),
+            r('a'),
+            r('aa'),
+            r('aaa'),
+            r('aaaa'),
+            r('aaaaaab')
+        )
+
+        r = compile(rep(a))
+        self._true(
+            r(''),
+            r('a'),
+            r('a' * 10),
+            r('a' * 100)
+        )
+        self._false(
+            r('b'),
+            r('b' * 3),
+            r(('a' * 10) + 'b'),
+            r(('a' * 100) + 'b')
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

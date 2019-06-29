@@ -392,6 +392,36 @@ class RTChoices(RegularTreeNode):
         return FragChoices(self.char_lst)
 
 
+class RTCounted(RegularTreeNode):
+    def __init__(self, rt, min=0, max=None):
+        self.rt = rt
+        assert min >= 0
+        assert max is None or (isinstance(max, int) and max > min)
+        self.min = min
+        self.max = max
+
+    def to_frag(self):
+
+        # frag list whose amount are certain
+        frag_lst_1 = []
+        for i in range(self.min):
+            frag_lst_1.append(self.rt)
+
+        # frag list whose amount are not certain
+        frag_lst_2 = []
+
+        # has max, just append with several "rt?"
+        if self.max:
+            for i in range(self.max - self.min):
+                frag_lst_2.append(RT01(self.rt))
+
+        # no max, append with one "rt*"
+        else:
+            frag_lst_2.append(RTMany(self.rt))
+
+        return RTConcat(*frag_lst_1 + frag_lst_2).to_frag()
+
+
 _ = RTChar
 s = RTString
 c = RTConcat
@@ -399,3 +429,4 @@ h01 = RT01  # has 0 or 1
 hm = RTMany  # has many
 h1m = RT1Many  # has 1 or many
 _any = RTChoices
+rep = RTCounted  # repeat with count
